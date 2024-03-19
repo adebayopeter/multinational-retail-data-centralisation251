@@ -1,75 +1,74 @@
-import psycopg2
+import yaml
+from sqlalchemy import create_engine, MetaData, Table
 
 
 class DatabaseConnector:
 
-    def __init__(self, dbname, user, password, host, port):
-        self.dbname = dbname
-        self.user = user
-        self.password = password
-        self.host = host
-        self.port = port
-        self.conn = None
+    def __init__(self, creds_file='db_creds.yaml'):
+        """Load database credentials from the YAML file."""
+        self.creds_file = creds_file
+        self.db_param = self.read_db_creds(self.creds_file)
 
-    def connect(self):
-        """Establishes a connection to the database."""
+    def read_db_creds(self, creds_file):
+        """Load database credentials from the YAML file."""
+        self.creds_file = creds_file
         try:
-            self.conn = psycopg2.connect(
-                dbname=self.dbname,
-                user=self.user,
-                password=self.password,
-                host=self.host,
-                port=self.port
-            )
-            print("Connected to the database")
+            with open(self.creds_file, 'r') as file:
+                db_param = yaml.safe_load(file)
+        except FileNotFoundError:
+            print("Credentials file not found")
+        except KeyError as e:
+            print("Missing key in credentials file: ", e)
+        return db_param
+
+    def init_db_engine(self):
+        if not self.db_param:
+            return None
+
+        db_uri = f"postgresql://{self.db_param['RDS_USER']}:{self.db_param['RDS_PASSWORD']}@{self.db_param['RDS_HOST']}:{self.db_param['RDS_PORT']}/{self.db_param['RDS_DATABASE']}"
+        engine = create_engine(db_uri)
+        return engine
+
+    def list_db_tables(self):
+        """List all tables in the database"""
+        try:
+            engine = self.init_db_engine()
+            if not engine:
+                print("Error connecting to database engine.")
+                return []
+
+            metadata = MetaData()
+            metadata.reflect(bind=engine)
+            tables = list(metadata.tables.keys())
+            return tables
         except Exception as e:
-            print("Failed to connect to the database:", e)
+            print("Error here: ", e)
 
-    def disconnect(self):
-        """Closes the database connection."""
-        if self.conn is not None:
-            self.conn.close()
-            print("Disconnect from the database")
+    def upload_to_db(self, df, table_name):
+        """Upload a dataframe to a specified table in the database"""
+        try:
+            engine = self.init_db_engine()
+            if not engine:
+                print("Error initializing database engine")
+                return False
 
+            # Create a SQLAlchemy Table object for the specified table
+            metadata = MetaData()
+            metadata.reflect(bind=engine)
+            table = Table(table_name, metadata)
 
-    def execute_query(self, query):
-        """Executes a SQL query on the connected database."""
-        if self.conn is not None:
-            try:
-                cursor = self.conn.cursor()
-                cursor.execute(query)
-                self.conn.commit()
-                print("Query executed successfully")
-            except Exception as e:
-                print("Failed to execute query: ", e)
-        else:
-            print("Not connected to the database")
+            # Upload the dataframe to the database table
+            with engine.connect() as connection:
+                df.to_sql(table_name, connection, if_exists='replace', index=False)
+
+            print(f"Data uploaded successfully to table `{table_name}`")
+            return True
+        except Exception as e:
+            print(f"Error uploading data to table `{table_name}` : {e}")
+            return False
 
 
 if __name__ == "__main__":
-    db_connector = DatabaseConnector(
-        dbname='',
-        user='',
-        password='',
-        host='',
-        port=''
-    )
+    db_connector = DatabaseConnector()
+    db_engine = db_connector.init_db_engine()
 
-    # Connect to the database
-    db_connector.connect()
-
-    # Query
-    create_table_query = """
-    CREATE TABLE IF NOT EXISTS example_table (
-        id SERIAL PRIMARY KEY,
-        name VARCHAR(255),
-        age INT
-    );
-    """
-
-    # Execute query
-    db_connector.execute_query(create_table_query)
-
-    # disconnect from the database
-    db_connector.disconnect()
-    

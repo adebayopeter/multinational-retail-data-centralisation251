@@ -1,6 +1,43 @@
 import pandas as pd
 
+
 class DataCleaning:
+    @staticmethod
+    def clean_user_data(data_df):
+        """
+        Clean the user data DataFrame.
+
+        Args:
+            data_df (pd.DataFrame): DataFrame containing user dat.
+
+        Returns:
+            pd.DataFrame: Cleaned DataFrame
+        """
+        # Calculate columns with less than 10% non-null values
+        threshold = int(len(data_df) * 0.1)
+
+        # Drop columns with less than 10% non-null values
+        data_df = data_df.dropna(axis=1, thresh=threshold)
+
+        # Drop rows with NULL values
+        #data_df.dropna(inplace=True)
+
+        # Convert date columns to datatime format
+        date_columns = ['opening_date']
+        for col in date_columns:
+            if col in data_df.columns:
+                data_df.loc[:, col] = pd.to_datetime(data_df[col], errors='coerce', format='%Y-%m-%d')
+                data_df = data_df.dropna(subset=[col])
+
+        # Convert numeric columns saved as objects to numeric
+        numeric_columns = ['longitude', 'staff_numbers', 'latitude']
+        for col in numeric_columns:
+            if col in data_df.columns:
+                data_df.loc[:, col] = pd.to_numeric(data_df[col], errors='coerce')
+                data_df = data_df.dropna(subset=[col])
+
+        return data_df
+
     @staticmethod
     def clean_csv(file_path):
         """Clean data from a CSV file."""
@@ -9,7 +46,7 @@ class DataCleaning:
             # perform data cleaning operations
             return df
         except Exception as e:
-            print("Error cleanning CSV data: ", e)
+            print("Error cleaning CSV data: ", e)
             return None
 
     @staticmethod

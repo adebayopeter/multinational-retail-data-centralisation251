@@ -1,11 +1,38 @@
 import csv
+
+import pandas as pd
 import requests
 import boto3
+from sqlalchemy import MetaData, Table, select
 
 
 class DataExtractor:
-    def __init__(self):
-        pass
+    def __init__(self, database_connector):
+        self.database_connector = database_connector
+
+    def read_rds_table(self, table_name):
+        """Read data from the specified table in the RDS database."""
+        try:
+            engine = self.database_connector.init_db_engine()
+            if not engine:
+                print("Error initializing database engine.")
+                return None
+
+            with engine.connect() as connection:
+                metadata = MetaData()
+                metadata.reflect(bind=engine)
+                table = Table(table_name, metadata, autoload=True)
+                columns = table.columns
+                query = select(columns)
+                result = connection.execute(query)
+                data = result.fetchall()
+
+                # convert data from db into pandas Dataframe
+                df = pd.DataFrame(data, columns=[c.name for c in columns])
+                return df
+        except Exception as e:
+            print(f"Error reading data from table `{table_name}`: {e}")
+            return None
 
     @staticmethod
     def extract_from_csv(file_path):
