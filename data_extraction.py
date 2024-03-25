@@ -4,6 +4,13 @@ import pandas as pd
 import requests
 import boto3
 from sqlalchemy import MetaData, Table, select
+import warnings
+import tabula
+import jpype
+
+
+# Filter out the FutureWarning from tabula
+warnings.filterwarnings("ignore", message="errors='ignore' is deprecated", category=FutureWarning)
 
 
 class DataExtractor:
@@ -32,6 +39,18 @@ class DataExtractor:
                 return df
         except Exception as e:
             print(f"Error reading data from table `{table_name}`: {e}")
+            return None
+
+    @staticmethod
+    def retrieve_pdf_data(pdf_url_link):
+        try:
+            # Extract tables from PDF into single DataFrame
+            pdf_df = tabula.read_pdf(pdf_url_link, pages='all', multiple_tables=True)
+            combined_pdf_df = pd.concat(pdf_df)
+
+            return combined_pdf_df
+        except Exception as e:
+            print(f"Error retrieving data from PDF: {e}")
             return None
 
     @staticmethod

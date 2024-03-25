@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 
 
 class DataCleaning:
@@ -8,7 +9,7 @@ class DataCleaning:
         Clean the user data DataFrame.
 
         Args:
-            data_df (pd.DataFrame): DataFrame containing user dat.
+            data_df (pd.DataFrame): DataFrame containing user data.
 
         Returns:
             pd.DataFrame: Cleaned DataFrame
@@ -20,7 +21,7 @@ class DataCleaning:
         data_df = data_df.dropna(axis=1, thresh=threshold)
 
         # Drop rows with NULL values
-        #data_df.dropna(inplace=True)
+        # data_df.dropna(inplace=True)
 
         # Convert date columns to datatime format
         date_columns = ['opening_date']
@@ -37,6 +38,46 @@ class DataCleaning:
                 data_df = data_df.dropna(subset=[col])
 
         return data_df
+
+    @staticmethod
+    def clean_card_data(card_data_df):
+        """
+        Clean the card data DataFrame.
+
+        Args:
+            card_data_df (pd.DataFrame): DataFrame containing card data.
+
+        Returns:
+            pd.DataFrame: Cleaned DataFrame
+        """
+        # Drop rows with all NULL values
+        card_data_df = card_data_df.dropna(how='all')
+
+        # Drop rows with non-numeric card numbers
+        card_data_df = card_data_df[pd.to_numeric(card_data_df['card_number'], errors='coerce').notnull()]
+
+        # Convert 'expiry_date' column to datetime data type
+        # card_data_df['expiry_date'] = pd.to_datetime(card_data_df['expiry_date'], format='%m/%y')
+
+        # Convert 'date_payment_confirmed' column to datetime data type
+        card_data_df['date_payment_confirmed'] = pd.to_datetime(
+            card_data_df['date_payment_confirmed'], errors='coerce', format='%Y-%m-%d')
+
+        # Drop all rows with NULL values in 'expiry_date' or 'date_payment_confirmed' columns
+        card_data_df = card_data_df.dropna(subset=['expiry_date', 'date_payment_confirmed'])
+
+        # Convert `card_provider` column into string data type
+        card_data_df['card_provider'] = card_data_df['card_provider'].str.strip()
+        card_data_df['card_provider'] = card_data_df['card_provider'].astype("string")
+
+        # Convert `card_number` column into integer data type
+        card_data_df['card_number'] = card_data_df['card_number'].astype(str).str.rstrip('.0')
+        card_data_df['card_number'] = pd.to_numeric(card_data_df['card_number'], errors='coerce', downcast='integer')
+
+        # Reset the index
+        card_data_df = card_data_df.reset_index(drop=True)
+
+        return card_data_df
 
     @staticmethod
     def clean_csv(file_path):
