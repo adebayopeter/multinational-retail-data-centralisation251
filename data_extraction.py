@@ -90,6 +90,60 @@ class DataExtractor:
             return []
 
     @staticmethod
+    def list_number_of_stores(api_url, headers):
+        """
+        Extracts the number of stores from the API.
+
+        Args:
+            api_url (str): The URL endpoint for retrieving the number of stores.
+            headers (dict): The header dictionary containing the API key.
+
+        Returns:
+            int: The number of stores.
+        """
+        try:
+            response = requests.get(api_url, headers=headers)
+            if response.status_code == 200:
+                return response.json()['number_stores']
+            else:
+                print("Failed to retrieve number of stores. Status code:", response.status_code)
+                return None
+        except Exception as e:
+            print("Error retrieving number of stores:", e)
+            return None
+
+    @staticmethod
+    def retrieve_stores_data(api_url, headers, store_start_num, store_end_num):
+        """
+        Retrieve store data for a range of store numbers from the API and save them in a pandas dataframe
+
+        Args:
+            api_url (str): The URL endpoint for retrieving store data. It should contain a
+                placeholder(store_number) for the store number.
+            headers (dict): The header dictionary containing the API key.
+            store_start_num (int): The store starting number.
+            store_end_num (int): The store ending number.
+
+        Returns:
+            pd.DataFrame: DataFrame containing store data.
+        """
+        store_data_list = []
+        try:
+            for store_num in range(store_start_num, store_end_num):
+                url = api_url.format(store_number=store_num)
+                response = requests.get(url, headers=headers)
+                if response.status_code == 200:
+                    store_data = response.json()
+                    store_data_list.append(store_data)
+                else:
+                    print(f"Failed to retrieve data for store number {store_num}. Status code:", response.status_code)
+            store_data_df = pd.DataFrame(store_data_list)
+            return store_data_df
+        except Exception as e:
+            print("Error retrieving store data:", e)
+            return None
+
+    @staticmethod
     def extract_from_s3(bucket_name, object_key):
         """
         Extracts data from an S3 bucket.

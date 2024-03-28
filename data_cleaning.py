@@ -80,6 +80,71 @@ class DataCleaning:
         return card_data_df
 
     @staticmethod
+    def clean_store_data(store_data_df):
+        """
+        Clean the store data DataFrame.
+
+        Args:
+            store_data_df (pd.DataFrame): DataFrame containing store data.
+
+        Returns:
+            pd.DataFrame: Cleaned DataFrame
+        """
+        # Drop rows with all NULL values
+        store_data_df = store_data_df.dropna(how='all')
+
+        # Drop rows with non-numeric longitude
+        store_data_df = store_data_df[pd.to_numeric(store_data_df['longitude'], errors='coerce').notnull()]
+
+        # Drop rows with non-numeric latitude
+        store_data_df = store_data_df[pd.to_numeric(store_data_df['latitude'], errors='coerce').notnull()]
+
+        # Convert 'opening_date' column to datetime data type
+        store_data_df['opening_date'] = pd.to_datetime(
+            store_data_df['opening_date'], errors='coerce', format='%Y-%m-%d')
+
+        # Drop all rows with NULL values in 'opening_date' column
+        store_data_df = store_data_df.dropna(subset=['opening_date'])
+
+        # Convert `staff_numbers` column into integer data type
+        store_data_df['staff_numbers'] = pd.to_numeric(store_data_df['staff_numbers'],
+                                                       errors='coerce', downcast='integer')
+
+        # Replace NULL values with 0
+        store_data_df['staff_numbers'] = store_data_df['staff_numbers'].fillna(0)
+
+        # Drop `lat` column
+        store_data_df.drop(columns=['lat'], inplace=True)
+
+        # Convert `longitude` column into integer data type
+        store_data_df['longitude'] = pd.to_numeric(store_data_df['longitude'], errors='coerce')
+
+        # Convert `latitude` column into integer data type
+        store_data_df['latitude'] = pd.to_numeric(store_data_df['latitude'], errors='coerce')
+
+        # Replace `eeAmerica` with `America`
+        store_data_df['continent'] = store_data_df['continent'].replace('eeAmerica', 'America')
+
+        # Replace `eeEurope` with `Europe`
+        store_data_df['continent'] = store_data_df['continent'].replace('eeEurope', 'Europe')
+
+        # Convert `card_provider` column into string data type
+        string_columns = ['address', 'locality', 'store_code', 'store_type', 'country_code', 'continent']
+        # Iterate over each column and apply string operations
+        for col in string_columns:
+            if col in store_data_df.columns:
+                store_data_df[col] = store_data_df[col].str.strip()
+                store_data_df[col] = store_data_df[col].astype("string")
+
+        # Reset/rearrange index column
+        # store_data_df.set_index('index', inplace=True)
+        # store_data_df.reset_index(drop=False, inplace=True)
+        store_data_df.reset_index(drop=True, inplace=True)
+        store_data_df.index += 1
+
+        return store_data_df
+
+    @staticmethod
     def clean_csv(file_path):
         """Clean data from a CSV file."""
         try:
