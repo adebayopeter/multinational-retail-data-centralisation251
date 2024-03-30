@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+import re
 
 
 class DataCleaning:
@@ -128,7 +129,7 @@ class DataCleaning:
         # Replace `eeEurope` with `Europe`
         store_data_df['continent'] = store_data_df['continent'].replace('eeEurope', 'Europe')
 
-        # Convert `card_provider` column into string data type
+        # Convert columns into string data type
         string_columns = ['address', 'locality', 'store_code', 'store_type', 'country_code', 'continent']
         # Iterate over each column and apply string operations
         for col in string_columns:
@@ -154,6 +155,90 @@ class DataCleaning:
         except Exception as e:
             print("Error cleaning CSV data: ", e)
             return None
+
+    @staticmethod
+    def convert_product_weights(s3_csv_data_df):
+        # Make a copy of the DataFrame to avoiding modifying the original
+        s3_csv_data_df = s3_csv_data_df.copy()
+
+        # Func to convert ml to kg
+        def ml_to_kg(ml_value):
+            # if 1ml = 1g, ml to kg dividing by 1000
+            return ml_value / 1000
+
+        # Func to extract numeric values from strings
+        def extract_numeric_value(weight_string):
+            numeric_value = None
+            if isinstance(weight_string, str):
+                # Check for patterns like `12 x 100g`
+                match = re.search(r'(\d+)\s*x\s*(\d+(\.\d+)?)\s*(\w+)', weight_string)
+                if match:
+                    qty = float(match.group(1))
+                    unit_weight = float(match.group(2))
+                    unit = match.group(4)
+                    # Check for units and convert to kg appropriately
+                    if 'kg' == unit.lower():
+                        numeric_value = qty * unit_weight
+                    elif 'g' == unit.lower():
+                        numeric_value = (qty * unit_weight) / 1000
+                    elif 'ml' == unit.lower():
+                        numeric_value = (qty * unit_weight) / 1000
+                        numeric_value *= 0.001
+                else:
+                    # Extract numeric value from the string
+                    match = re.search(r'(\d+(\.\d+)?)', weight_string)
+                    if match:
+                        numeric_value = float(match.group(1))
+                        # Check for units and convert to kg appropriately
+                        if 'kg' in weight_string.lower():
+                            numeric_value *= 1.0
+                        elif 'g' in weight_string.lower():
+                            numeric_value *= 0.001
+                        elif 'ml' in weight_string.lower():
+                            numeric_value *= 0.001
+                            numeric_value *= 0.001
+            return numeric_value
+
+        s3_csv_data_df['weight'] = s3_csv_data_df['weight'].apply(lambda x: extract_numeric_value(x))
+
+        # Remove rows with non-numeric or NaN values in weight column
+        s3_csv_data_df = s3_csv_data_df[s3_csv_data_df['weight'].notnull()]
+
+        return s3_csv_data_df
+
+    @staticmethod
+    def clean_products_data(s3_csv_data_df):
+        # Make a copy of the DataFrame to avoiding modifying the original
+        s3_csv_data_df = s3_csv_data_df.copy()
+
+        # Remove `pound` sign from product_price
+        s3_csv_data_df['product_price'] = s3_csv_data_df['product_price'].str.replace('£', '')
+
+        # Remove rows with empty or non-numeric values in `product_price` column
+        s3_csv_data_df = s3_csv_data_df[pd.to_numeric(s3_csv_data_df['product_price'], errors='coerce').notnull()]
+
+        # Convert `product_price` to float
+        s3_csv_data_df['product_price'] = pd.to_numeric(s3_csv_data_df['product_price'], errors='coerce')
+
+        # Convert `EAN` column to integer
+        s3_csv_data_df['EAN'] = pd.to_numeric(s3_csv_data_df['EAN'], errors='coerce', downcast='integer')
+
+        # Convert 'date_added' column to datetime data type
+        s3_csv_data_df['date_added'] = pd.to_datetime(
+            s3_csv_data_df['date_added'], errors='coerce', format='%Y-%m-%d')
+
+        # Remove rows with empty or NULL values in `date_added` column
+        s3_csv_data_df = s3_csv_data_df.dropna(subset=['date_added'])
+
+        # Convert columns into string data type
+        string_columns = ['product_name', 'category', 'uuid', 'removed', 'product_code']
+        # Iterate over each column and apply string operations
+        for col in string_columns:
+            if col in s3_csv_data_df.columns:
+                s3_csv_data_df[col] = s3_csv_data_df[col].str.strip()
+                s3_csv_data_df[col] = s3_csv_data_df[col].astype("string")
+
+        return s3_csv_data_df
 
     @staticmethod
     def clean_api_data(url):

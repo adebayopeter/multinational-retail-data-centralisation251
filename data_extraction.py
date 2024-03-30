@@ -7,6 +7,7 @@ from sqlalchemy import MetaData, Table, select
 import warnings
 import tabula
 import jpype
+from io import StringIO
 
 
 # Filter out the FutureWarning from tabula
@@ -144,25 +145,29 @@ class DataExtractor:
             return None
 
     @staticmethod
-    def extract_from_s3(bucket_name, object_key):
+    def extract_from_s3(s3_address):
         """
         Extracts data from an S3 bucket.
 
         Args:
-            bucket_name (str): The name of the S3 bucket.
-            object_key (str): The key of the object in the S3 bucket.
+            s3_address (str): The S3 bucket url.
 
         Returns:
-            list: A list of dictionaries representing the extracted data.
+            pd.DataFrame: DataFrame containing store data.
         """
         s3 = boto3.client('s3')
+
+        # Extract bucket and key from s3 address
+        bucket_name, object_key = s3_address.split('s3://')[1].split('/', 1)
         try:
             response = s3.get_object(Bucket=bucket_name, Key=object_key)
-            data = response['Body'].read().decode('utf-8')
-            # Process the data as needed (e.g., parse JSON)
-            return data
+            s3_csv_data = response['Body'].read().decode('utf-8')
+
+            # Convert data to CSV
+            s3_df = pd.read_csv(StringIO(s3_csv_data))
+            return s3_df
         except Exception as e:
-            print("Failed to fetch data from S3: ", e)
+            print(f"Failed to fetch data from S3: {e}")
             return []
 
 
