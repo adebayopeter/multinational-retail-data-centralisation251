@@ -91,6 +91,27 @@ class DataExtractor:
             return []
 
     @staticmethod
+    def extract_from_json(url):
+        """
+        Extracts data from a json file.
+
+        Args:
+            url (str): The URL of the json file.
+
+        Returns:
+            pd.DataFrame: DataFrame containing store data.
+        """
+        try:
+            response = requests.get(url)
+            if response.status_code == 200:
+                return pd.DataFrame(response.json())
+            else:
+                print(f"Failed to retrieve data from json file")
+        except Exception as e:
+            print(f"Error retrieving json data:  {e}")
+            return None
+
+    @staticmethod
     def list_number_of_stores(api_url, headers):
         """
         Extracts the number of stores from the API.

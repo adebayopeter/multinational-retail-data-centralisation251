@@ -266,6 +266,40 @@ class DataCleaning:
         return order_table_df
 
     @staticmethod
+    def clean_json_data(json_data_df):
+        # Make a copy of the DataFrame to avoiding modifying the original
+        json_data_df = json_data_df.copy()
+
+        # Convert `time_period`, `date_uuid` columns to string
+        string_columns = ['time_period', 'date_uuid']
+        for col in string_columns:
+            if col in json_data_df.columns:
+                json_data_df[col] = json_data_df[col].str.strip()
+                json_data_df[col] = json_data_df[col].astype("string")
+
+        # Drop empty or NULL rows in `time_period`, `date_uuid` columns
+        json_data_df = json_data_df.dropna(subset=string_columns)
+
+        # Convert `month`, `year` and `day` columns to integer
+        json_data_df['year'] = pd.to_numeric(json_data_df['year'], errors='coerce', downcast='integer')
+
+        # Drop empty or NULL rows in `month`, `year` and `day` columns
+        json_data_df = json_data_df.dropna(subset=['year'])
+
+        # Ensure year column only as integer data type
+        json_data_df['year'] = json_data_df['year'].astype(int)
+
+        json_data_df['month'] = pd.to_numeric(json_data_df['month'], errors='coerce', downcast='integer')
+        json_data_df['day'] = pd.to_numeric(json_data_df['day'], errors='coerce', downcast='integer')
+
+        json_data_df['timestamp'] = pd.to_datetime(json_data_df['timestamp'], format='%H:%M:%S')
+
+        # Drop empty or NULL rows in `timestamp` column
+        json_data_df = json_data_df.dropna(subset=['timestamp'])
+
+        return json_data_df
+
+    @staticmethod
     def clean_api_data(url):
         """Clean data from an API."""
         # Implement data cleaning for API data

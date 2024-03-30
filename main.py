@@ -89,19 +89,37 @@ cleaner = dc.DataCleaning()
 ############
 # Milestone 1: Task 7
 ############
-table_names = db_connector.list_db_tables()
-print(table_names)
-order_table = table_names[2]
-orders_table_df = extractor.read_rds_table(order_table)
-print(orders_table_df.info())
-print(orders_table_df.head())
-print(orders_table_df.shape)
-orders_table_df.to_csv('orders_table_data.csv')
-cleaned_orders_table_df = cleaner.clean_orders_data(orders_table_df)
-cleaned_orders_table_df.to_csv('cleaned_orders_table.csv')
-print(cleaned_orders_table_df.info())
+# table_names = db_connector.list_db_tables()
+# print(table_names)
+# order_table = table_names[2]
+# orders_table_df = extractor.read_rds_table(order_table)
+# print(orders_table_df.info())
+# print(orders_table_df.head())
+# print(orders_table_df.shape)
+# orders_table_df.to_csv('orders_table_data.csv')
+# cleaned_orders_table_df = cleaner.clean_orders_data(orders_table_df)
+# cleaned_orders_table_df.to_csv('cleaned_orders_table.csv')
+# print(cleaned_orders_table_df.info())
+# db_connector2 = db.DatabaseConnector('db_creds_local.yaml')
+# success = db_connector2.upload_to_db(cleaned_orders_table_df, 'orders_table')
+# if success:
+#     print(f"Data uploaded to the database successfully")
+# else:
+#     print(f"Failed to upload data to database")
+
+
+############
+# Milestone 1: Task 8
+############
+json_url = 'https://data-handling-public.s3.eu-west-1.amazonaws.com/date_details.json'
+json_data_df = extractor.extract_from_json(json_url)
+print(json_data_df.info())
+json_data_df.to_csv('csv/json_data.csv')
+cleaned_json_data_df = cleaner.clean_json_data(json_data_df)
+print(cleaned_json_data_df.info())
+cleaned_json_data_df.to_csv('csv/cleaned_json_data.csv')
 db_connector2 = db.DatabaseConnector('db_creds_local.yaml')
-success = db_connector2.upload_to_db(cleaned_orders_table_df, 'orders_table')
+success = db_connector2.upload_to_db(cleaned_json_data_df, 'dim_date_times')
 if success:
     print(f"Data uploaded to the database successfully")
 else:
