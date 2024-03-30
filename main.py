@@ -6,13 +6,13 @@ db_connector = db.DatabaseConnector()
 extractor = de.DataExtractor(db_connector)
 cleaner = dc.DataCleaning()
 
-s3_csv_data_df = extractor.extract_from_s3('s3://data-handling-public/products.csv')
-print(s3_csv_data_df.info())
-s3_csv_data_df.to_csv('s3_csv_data.csv')
-cleaned_s3_csv_data_df_2 = cleaner.convert_product_weights(s3_csv_data_df)
-cleaned_s3_csv_data_df = cleaner.clean_products_data(cleaned_s3_csv_data_df_2)
-cleaned_s3_csv_data_df.to_csv('cleaned_s3_csv_data.csv')
-print(cleaned_s3_csv_data_df.info())
+# s3_csv_data_df = extractor.extract_from_s3('s3://data-handling-public/products.csv')
+# print(s3_csv_data_df.info())
+# s3_csv_data_df.to_csv('s3_csv_data.csv')
+# cleaned_s3_csv_data_df_2 = cleaner.convert_product_weights(s3_csv_data_df)
+# cleaned_s3_csv_data_df = cleaner.clean_products_data(cleaned_s3_csv_data_df_2)
+# cleaned_s3_csv_data_df.to_csv('cleaned_s3_csv_data.csv')
+# print(cleaned_s3_csv_data_df.info())
 
 # api_url = 'https://aqj7u5id95.execute-api.eu-west-1.amazonaws.com/prod/number_stores'
 # api_url_2 = 'https://aqj7u5id95.execute-api.eu-west-1.amazonaws.com/prod/store_details/{store_number}'
@@ -69,4 +69,40 @@ print(cleaned_s3_csv_data_df.info())
 # print(cleaned_data_df.info())
 # cleaned_data_df.to_csv('extract_2.csv')
 
+############
+# Milestone 1: Task 6
+############
+# s3_csv_data_df = extractor.extract_from_s3('s3://data-handling-public/products.csv')
+# print(s3_csv_data_df.info())
+# s3_csv_data_df.to_csv('s3_csv_data.csv')
+# cleaned_s3_csv_data_df_2 = cleaner.convert_product_weights(s3_csv_data_df)
+# cleaned_s3_csv_data_df = cleaner.clean_products_data(cleaned_s3_csv_data_df_2)
+# cleaned_s3_csv_data_df.to_csv('cleaned_s3_csv_data.csv')
+# print(cleaned_s3_csv_data_df.info())
+# db_connector2 = db.DatabaseConnector('db_creds_local.yaml')
+# success = db_connector2.upload_to_db(cleaned_s3_csv_data_df, 'dim_products')
+# if success:
+#     print(f"Data uploaded to the database successfully")
+# else:
+#     print(f"Failed to upload data to database")
 
+############
+# Milestone 1: Task 7
+############
+table_names = db_connector.list_db_tables()
+print(table_names)
+order_table = table_names[2]
+orders_table_df = extractor.read_rds_table(order_table)
+print(orders_table_df.info())
+print(orders_table_df.head())
+print(orders_table_df.shape)
+orders_table_df.to_csv('orders_table_data.csv')
+cleaned_orders_table_df = cleaner.clean_orders_data(orders_table_df)
+cleaned_orders_table_df.to_csv('cleaned_orders_table.csv')
+print(cleaned_orders_table_df.info())
+db_connector2 = db.DatabaseConnector('db_creds_local.yaml')
+success = db_connector2.upload_to_db(cleaned_orders_table_df, 'orders_table')
+if success:
+    print(f"Data uploaded to the database successfully")
+else:
+    print(f"Failed to upload data to database")

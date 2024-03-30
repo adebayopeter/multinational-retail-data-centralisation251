@@ -241,6 +241,31 @@ class DataCleaning:
         return s3_csv_data_df
 
     @staticmethod
+    def clean_orders_data(order_table_df):
+        # Drop `first_name`, `last_name`, and `1` column
+        order_table_df = order_table_df.drop(columns=['first_name', 'last_name', '1'])
+
+        # Convert `card_number` column to integer
+        order_table_df['card_number'] = pd.to_numeric(order_table_df['card_number'], errors='coerce',
+                                                      downcast='integer')
+
+        # Convert `product_quantity` column to integer
+        order_table_df['product_quantity'] = pd.to_numeric(order_table_df['product_quantity'], errors='coerce',
+                                                           downcast='integer')
+
+        # Drop empty or NULL rows in `card_number` and `product_quantity` columns
+        order_table_df = order_table_df.dropna(subset=['card_number', 'product_quantity'])
+
+        # Convert columns into string data type
+        string_columns = ['date_uuid', 'user_uuid', 'store_code', 'product_code']
+        for col in string_columns:
+            if col in order_table_df.columns:
+                order_table_df[col] = order_table_df[col].str.strip()
+                order_table_df[col] = order_table_df[col].astype("string")
+
+        return order_table_df
+
+    @staticmethod
     def clean_api_data(url):
         """Clean data from an API."""
         # Implement data cleaning for API data
