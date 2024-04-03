@@ -5,40 +5,101 @@ import re
 
 class DataCleaning:
     @staticmethod
-    def clean_user_data(data_df):
+    def clean_number(number):
+        if isinstance(number, str):
+            return ''.join(filter(str.isdigit, number))
+        elif isinstance(number, int):
+            return str(number)
+        else:
+            return None
+
+    @staticmethod
+    def extract_valid_email(email):
+        # Check email patterns
+        pattern = r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b'
+        match = re.search(pattern, email)
+        if match:
+            # email is valid
+            return email
+        else:
+            # invalid email
+            return None
+
+    @staticmethod
+    def extract_valid_phone(phone):
+        # Check email patterns
+        pattern = r'[\d()+ -]+'
+        match = re.findall(pattern, phone)
+        if match:
+            # Concatenate matched strings
+            cleaned_phone = ''.join(match)
+            cleaned_phone = re.sub(r'\s+', ' ', cleaned_phone)
+            return cleaned_phone.strip()
+        else:
+            return None
+
+    @staticmethod
+    def clean_date(date_str):
+        if isinstance(date_str, str):
+            try_formats = ['%Y-%m-%d', '%B %Y %d', '%d %B %Y', '%B %d %Y', '%B %Y',
+                           '%Y %B', '%Y', '%Y %B %d', '%Y/%m/%d']
+            for fmt in try_formats:
+                try:
+                    return pd.to_datetime(date_str, format=fmt)
+                except ValueError:
+                    continue
+        return pd.NaT
+
+    @staticmethod
+    def clean_user_data(user_data_df):
         """
         Clean the user data DataFrame.
 
         Args:
-            data_df (pd.DataFrame): DataFrame containing user data.
+            user_data_df (pd.DataFrame): DataFrame containing user data.
 
         Returns:
             pd.DataFrame: Cleaned DataFrame
         """
-        # Calculate columns with less than 10% non-null values
-        threshold = int(len(data_df) * 0.1)
+        # Make a copy of the DataFrame to avoiding modifying the original
+        user_data_df = user_data_df.copy()
 
-        # Drop columns with less than 10% non-null values
-        data_df = data_df.dropna(axis=1, thresh=threshold)
+        # Drop rows with all NULL values
+        user_data_df = user_data_df.dropna(how='all')
 
-        # Drop rows with NULL values
-        # data_df.dropna(inplace=True)
+        # Convert `date_of_birth`, `join_date` to datetime data type
+        user_data_df['date_of_birth'] = pd.to_datetime(
+            user_data_df['date_of_birth'], errors='coerce', format='%Y-%m-%d')
+        user_data_df['join_date'] = pd.to_datetime(
+            user_data_df['join_date'], errors='coerce', format='%Y-%m-%d')
 
-        # Convert date columns to datatime format
-        date_columns = ['opening_date']
-        for col in date_columns:
-            if col in data_df.columns:
-                data_df.loc[:, col] = pd.to_datetime(data_df[col], errors='coerce', format='%Y-%m-%d')
-                data_df = data_df.dropna(subset=[col])
+        # Drop all rows with NULL values in `date_of_birth` or `join_date` columns
+        user_data_df = user_data_df.dropna(subset=['date_of_birth', 'join_date'])
 
-        # Convert numeric columns saved as objects to numeric
-        numeric_columns = ['longitude', 'staff_numbers', 'latitude']
-        for col in numeric_columns:
-            if col in data_df.columns:
-                data_df.loc[:, col] = pd.to_numeric(data_df[col], errors='coerce')
-                data_df = data_df.dropna(subset=[col])
+        # Convert `email_address` column to string
+        user_data_df['email_address'] = (user_data_df['email_address']
+                                         .apply(lambda x: DataCleaning.extract_valid_email(x)))
 
-        return data_df
+        # Drop all rows with None or empty values `email_address` column
+        user_data_df = user_data_df.dropna(subset=['email_address'])
+
+        # Extract valid phone number
+        user_data_df['phone_number'] = (user_data_df['phone_number']
+                                        .apply(lambda x: DataCleaning.extract_valid_phone(x)))
+
+        # Drop all rows with None or empty values `phone_number` column
+        user_data_df = user_data_df.dropna(subset=['phone_number'])
+
+        # Convert `first_name`, `last_name`, `company`, `country`, `address`, `country_code`
+        # and `user_uuid`  column into string data type
+        string_columns = ['first_name', 'last_name', 'company', 'country', 'email_address',
+                          'address', 'phone_number', 'country_code', 'user_uuid']
+        for col in string_columns:
+            if col in user_data_df.columns:
+                user_data_df[col] = user_data_df[col].str.strip()
+                user_data_df[col] = user_data_df[col].astype("string")
+
+        return user_data_df
 
     @staticmethod
     def clean_card_data(card_data_df):
@@ -54,6 +115,9 @@ class DataCleaning:
         # Drop rows with all NULL values
         card_data_df = card_data_df.dropna(how='all')
 
+        # Remove non-numerical characters like `?` from card_number
+        card_data_df['card_number'] = card_data_df['card_number'].apply(DataCleaning.clean_number)
+
         # Drop rows with non-numeric card numbers
         card_data_df = card_data_df[pd.to_numeric(card_data_df['card_number'], errors='coerce').notnull()]
 
@@ -61,8 +125,9 @@ class DataCleaning:
         # card_data_df['expiry_date'] = pd.to_datetime(card_data_df['expiry_date'], format='%m/%y')
 
         # Convert 'date_payment_confirmed' column to datetime data type
-        card_data_df['date_payment_confirmed'] = pd.to_datetime(
-            card_data_df['date_payment_confirmed'], errors='coerce', format='%Y-%m-%d')
+        card_data_df['date_payment_confirmed'] = card_data_df['date_payment_confirmed'].apply(DataCleaning.clean_date)
+        # card_data_df['date_payment_confirmed'] = pd.to_datetime(
+        #     card_data_df['date_payment_confirmed'], errors='coerce', format='%Y-%m-%d')
 
         # Drop all rows with NULL values in 'expiry_date' or 'date_payment_confirmed' columns
         card_data_df = card_data_df.dropna(subset=['expiry_date', 'date_payment_confirmed'])
@@ -72,7 +137,7 @@ class DataCleaning:
         card_data_df['card_provider'] = card_data_df['card_provider'].astype("string")
 
         # Convert `card_number` column into integer data type
-        card_data_df['card_number'] = card_data_df['card_number'].astype(str).str.rstrip('.0')
+        card_data_df['card_number'] = card_data_df['card_number'].astype(str)
         card_data_df['card_number'] = pd.to_numeric(card_data_df['card_number'], errors='coerce', downcast='integer')
 
         # Reset the index
@@ -94,6 +159,10 @@ class DataCleaning:
         # Drop rows with all NULL values
         store_data_df = store_data_df.dropna(how='all')
 
+        # Replace all N/A and '' values with 0 in longitude and latitude columns
+        store_data_df['longitude'] = store_data_df['longitude'].replace(['N/A', '', None], 0)
+        store_data_df['latitude'] = store_data_df['latitude'].replace(['N/A', '', None], 0)
+
         # Drop rows with non-numeric longitude
         store_data_df = store_data_df[pd.to_numeric(store_data_df['longitude'], errors='coerce').notnull()]
 
@@ -101,8 +170,9 @@ class DataCleaning:
         store_data_df = store_data_df[pd.to_numeric(store_data_df['latitude'], errors='coerce').notnull()]
 
         # Convert 'opening_date' column to datetime data type
-        store_data_df['opening_date'] = pd.to_datetime(
-            store_data_df['opening_date'], errors='coerce', format='%Y-%m-%d')
+        store_data_df['opening_date'] = store_data_df['opening_date'].apply(DataCleaning.clean_date)
+        # store_data_df['opening_date'] = pd.to_datetime(
+        #     store_data_df['opening_date'], errors='coerce', format='%Y-%m-%d')
 
         # Drop all rows with NULL values in 'opening_date' column
         store_data_df = store_data_df.dropna(subset=['opening_date'])
