@@ -196,4 +196,3 @@ if __name__ == "__main__":
     extractor = DataExtractor()
     csv_data = extractor.extract_from_csv('example.csv')
     api_data = extractor.extract_from_api('https://api.example.com/data')
-    s3_data = extractor.extract_from_s3('example-bucket', 'example-object.json')

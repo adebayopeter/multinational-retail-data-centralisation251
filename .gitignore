@@ -3,3 +3,5 @@
 .idea
 /db_creds.yaml
 /db_creds_local.yaml
+/csv
+test.py
